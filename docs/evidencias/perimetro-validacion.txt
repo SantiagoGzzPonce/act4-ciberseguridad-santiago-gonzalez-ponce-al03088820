@@ -1,0 +1,53 @@
+=== 1. Segmentación (Firewall > Rules por interfaz)
+   ORIGEN          DESTINO         PUERTO RESULTADO  REGLA       DESCRIPCION
+ ✔ pc-01         → 172.16.10.10    443   PERMITIDO  INTERNA-5   Usuario usa el web publicado en la DMZ
+ ✔ pc-01         → 198.51.100.80   443   PERMITIDO  INTERNA-8   Usuario navega en Internet
+ ✔ pc-01         → 172.16.30.21    443   BLOQUEADO  INTERNA-7   Usuario no llega a la cámara IoT
+ ✔ pc-admin      → 172.16.30.21    443   PERMITIDO  INTERNA-6   Solo PC-ADMIN administra IoT
+ ✔ pc-01         → 172.16.20.1     443   BLOQUEADO  INTERNA-2   Usuario no llega al WebGUI del firewall
+ ✔ pc-admin      → 172.16.20.1     443   PERMITIDO  INTERNA-1   PC-ADMIN sí llega al WebGUI
+ ✔ srv-web       → 172.16.20.10    445   BLOQUEADO  DMZ-2       DMZ comprometida no llega a INTERNA
+ ✔ srv-web       → 172.16.30.21    443   BLOQUEADO  DMZ-3       DMZ no llega a IoT
+ ✔ srv-web       → 198.51.100.80   80    PERMITIDO  DMZ-4       Servidor DMZ descarga actualizaciones
+ ✔ cam-01        → 172.16.10.20    8883  PERMITIDO  IOT-2       Cámara habla con su broker MQTT/TLS
+ ✔ cam-01        → 172.16.20.10    445   BLOQUEADO  IOT-3       IoT no llega a la red interna
+ ✔ cam-01        → 172.16.20.50    443   BLOQUEADO  IOT-3       IoT no llega a PC-ADMIN
+ ✔ cam-01        → 198.51.100.80   443   BLOQUEADO  IOT-4       IoT sin Internet directo
+ ✔ atacante      → 198.51.100.2    443   PERMITIDO  WAN-1       Internet llega al web publicado (NAT 443)
+ ✔ atacante      → 198.51.100.2    22    BLOQUEADO  WAN-deny    SSH del firewall no expuesto
+ ✔ atacante      → 172.16.20.10    445   BLOQUEADO  WAN-deny    Internet no alcanza la red interna
+ ✔ atacante      → 172.16.10.10    80    BLOQUEADO  WAN-deny    Solo 443 está publicado
+
+=== 2. Filtrado de contenido: DNSBL de phishing (pfBlockerNG)
+ ✔ pc-01         login-banco-seguro-mx.com          @172.16.20.1    → 10.10.10.1       DNSBL       Dominio de phishing → VIP de bloqueo
+ ✔ pc-01         cuenta.verificacion-cuenta-paypal.net @172.16.20.1    → 10.10.10.1       DNSBL       Subdominio también bloqueado
+ ✔ cam-01        microsoft365-soporte-login.com     @172.16.30.1    → 10.10.10.1       DNSBL       También protege la VLAN IoT
+ ✔ pc-01         www.act4.local                     @172.16.20.1    → 172.16.10.10     Resolver    Dominio interno resuelve normal
+ ✔ pc-01         www.unam.mx                        @172.16.20.1    → 198.51.100.80    Resolver    Dominio legítimo resuelve normal
+ ✔ pc-01         login-banco-seguro-mx.com          @198.51.100.53  → (sin respuesta)  INTERNA-4   No se puede esquivar con DNS externo
+
+Resultado: 23 correctas, 0 fallidas
+
+=== 3. Contadores por regla (equivale a States / Firewall logs de pfSense)
+  4 paquetes	Deny implicito (forward)
+  2 paquetes	Deny implicito (input)
+  2 paquetes	DMZ-2 DMZ no llega a INTERNA
+  2 paquetes	DMZ-3 sin movimiento lateral a IoT
+  1 paquetes	DMZ-4 actualizaciones
+  1 paquetes	INTERNA-1 PC_ADMIN -> WebGUI/SSH
+  2 paquetes	INTERNA-2 nadie mas administra el firewall
+  5 paquetes	INTERNA-3 / IOT-1 / DMZ-1 DNS Resolver
+  1 paquetes	INTERNA-4 bloquea DNS/DoT externo
+  1 paquetes	INTERNA-5 web publicado en DMZ
+  1 paquetes	INTERNA-6 administracion
+  2 paquetes	INTERNA-7 resto de redes privadas
+  1 paquetes	INTERNA-8 navegacion
+  1 paquetes	IOT-2 MQTT/TLS al broker
+  4 paquetes	IOT-3 IoT no llega a INTERNA
+  2 paquetes	IOT-4 sin Internet directo
+  1 paquetes	WAN-1 NAT HTTPS -> SRV_WEB
+
+=== 4. Consultas registradas por el resolver (Reports > Alerts > DNSBL)
+172.16.20.21/37992 config login-banco-seguro-mx.com is 10.10.10.1
+172.16.20.21/59774 config cuenta.verificacion-cuenta-paypal.net is 10.10.10.1
+172.16.30.21/48278 config microsoft365-soporte-login.com is 10.10.10.1

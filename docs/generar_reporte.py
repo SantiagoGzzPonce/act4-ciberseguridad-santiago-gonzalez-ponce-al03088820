@@ -230,16 +230,17 @@ P("Esta actividad recorre la defensa en profundidad de una organización pequeñ
   "detecta y bloquea escaneos de nmap, y por último se priorizan todas las amenazas en una matriz 5×5.")
 P("Las partes que pueden contenerse se ejecutaron de verdad en contenedores Podman *rootless* en "
   "Linux (Bazzite/Fedora): DVWA + MariaDB, OWASP ZAP, la API, Snort 2.9 y un contenedor atacante con "
-  "nmap. Todos los puertos se publican solo en `127.0.0.1`. Las salidas que se citan en este reporte "
-  "son las reales y están completas en `docs/evidencias/`. Packet Tracer y pfSense no corren en "
-  "contenedor: para ellos se entregan las configuraciones completas, la guía de armado y las pruebas "
-  "de validación, y los recuadros amarillos marcan dónde va cada captura de esas herramientas.")
+  "nmap, además de un firewall perimetral con las reglas de pfSense traducidas a nftables. Todos los puertos "
+  "se publican solo en `127.0.0.1` o en redes internas sin salida. Las salidas que se citan en este reporte "
+  "son las reales y están completas en `docs/evidencias/`. Packet Tracer no corre en contenedor: para la red "
+  "se entregan las configuraciones completas, la guía de armado y las pruebas, y los recuadros amarillos marcan "
+  "dónde va cada captura.")
 
 table(["Paso", "Herramienta / entorno", "Resultado principal"], [
     ["1. Vulnerabilidades web", "DVWA (digininja, PHP 8.5) + OWASP ZAP stable (Automation Framework)", "SQLi, XSS reflejado y control de acceso roto confirmados"],
     ["2. Protección de API", "Flask 3.1 + PyJWT 2.10 (RS256), Postman/Insomnia, curl", "25/25 pruebas; 401/403/400/429 según el ataque"],
     ["3. Red segura", "Cisco Packet Tracer 8.2 (2911, 2960)", "3 VLAN + gestión, ACL de mínimo privilegio, VPN IPsec"],
-    ["4. Perímetro", "pfSense CE 2.7 + pfBlockerNG + Snort 2.9.20; nmap 7.94", "Escaneos detectados y atacante bloqueado"],
+    ["4. Perímetro", "Diseño en pfSense CE 2.7; implementación equivalente con nftables + dnsmasq (DNSBL) + Snort 2.9.20; nmap 7.94", "23/23 pruebas de reglas y phishing; atacante bloqueado en 1 s"],
     ["5. Riesgos", "Matriz 5×5 (probabilidad × impacto)", "11 riesgos: 5 críticos → 0 tras mitigar"],
 ], widths=[3.5, 6.5, 6.5])
 caption("Tabla", "Resumen de la actividad.")
@@ -362,18 +363,28 @@ H("2. Protección de las API")
 H("2.1 Escenario generado con IA", 2)
 P("Se tomó como base el prompt sugerido: *«Genera un escenario de ataque a una API que use inyección SQL y "
   "JWT mal configurado. Incluye vector de ataque, impacto y dos recomendaciones de mitigación»*. La "
-  "respuesta íntegra y su auditoría están en `docs/bitacora-ia.md`. El escenario se convirtió en código: "
+  "respuesta íntegra de DeepSeek está en `docs/auditoria-ia/respuesta-deepseek.md` y su auditoría en `docs/bitacora-ia.md`. El escenario se convirtió en código: "
   "`app_vulnerable.py` reproduce exactamente esas fallas y `app.py` es la versión corregida, de modo que el "
   "ataque y la defensa se pueden ejecutar uno contra otra.")
 BITACORA = DOCS / "bitacora-ia.md"
-if BITACORA.exists() and "PENDIENTE" not in BITACORA.read_text():
-    P("Resumen de la auditoría de la respuesta de la IA:", bold=True)
-    txt = BITACORA.read_text()
-    m = re.search(r"## 4\..*?\n(.*?)(\n## |\Z)", txt, re.S)
-    if m:
-        for ln in m.group(1).strip().splitlines():
-            if ln.startswith("- "):
-                bullets([ln[2:]])
+btxt = BITACORA.read_text() if BITACORA.exists() else "PENDIENTE"
+if "PENDIENTE" not in btxt:
+    figure(EV / "ia-conversacion.png", "Prompt enviado a DeepSeek (chat web, Smart Search: 13 páginas) y el inicio de su respuesta.", width=15)
+    P("**Lo que la IA hizo bien.** Respetó el formato pedido (vector, impacto y dos mitigaciones), identificó las "
+      "dos fallas clásicas de JWT (`alg=none` y secreto HS256 débil roto por diccionario), insistió en que el "
+      "algoritmo lo fija el servidor y no el header, y recomendó RS256/ES256, claves de alta entropía, validar "
+      "`exp/iss/aud/nbf`, tokens de 15–60 min y mínimo privilegio en la base de datos.")
+    P("**Omisiones y errores.** La auditoría completa está en `docs/bitacora-ia.md`:", after=2)
+    sec4 = re.search(r"## 4\..*?\n(.*?)(\n## |\Z)", btxt, re.S).group(1)
+    filas = []
+    for ln in sec4.splitlines():
+        cols = [c.strip() for c in ln.strip().strip("|").split("|")]
+        if len(cols) == 4 and cols[0].isdigit():
+            filas.append(cols)
+    table(["#", "Tema", "Hallazgo", "Corrección"], filas, widths=[0.7, 2.8, 7.6, 5.5], size=8)
+    caption("Tabla", "Errores y omisiones de la respuesta de DeepSeek.")
+    P("Las correcciones 1–8 se aplicaron en `app.py`; el escenario de la IA se reprodujo en `app_vulnerable.py` "
+      "(con la SQLi en un parámetro de búsqueda en lugar del login).")
 else:
     placeholder("Captura de la conversación con la IA (prompt y respuesta). La auditoría se completa en docs/bitacora-ia.md.")
 
@@ -469,10 +480,15 @@ P("En capa 2 la segmentación se refuerza con troncal de VLAN explícitas sin DT
 
 # =================================================================== 4. PERÍMETRO
 H("4. Implementación de seguridad perimetral")
+P("El perímetro se diseñó para **pfSense CE 2.7** (reglas, alias, VPN, pfBlockerNG y Snort, con la guía paso a "
+  "paso en `perimetro-pfsense/README.md`) y se **implementó y probó** en un firewall equivalente construido en "
+  "contenedores (`lab-perimetro/`). pfSense corre sobre FreeBSD y no se puede contener; su motor de filtrado (pf) "
+  "se tradujo regla por regla a **nftables**, el filtro de paquetes del kernel Linux, con las mismas interfaces, "
+  "el mismo direccionamiento y la misma lógica: filtrado por interfaz de entrada, primera coincidencia gana, "
+  "estado de conexión y bloqueo implícito al final. Así, cada regla del diseño se comprobó con tráfico real.")
+
 H("4.1 Reglas de pfSense", 2)
-P("pfSense evalúa por interfaz de entrada y la primera coincidencia gana, con un bloqueo implícito al final. "
-  "Las interfaces DMZ (em1.10), INTERNA (em1.20) e IOT (em1.30) usan el mismo direccionamiento que el diseño "
-  "de Packet Tracer. Las reglas completas por interfaz (WAN, INTERNA, DMZ, IOT e IPsec) y los alias están en "
+P("Las reglas completas por interfaz (WAN, INTERNA, DMZ, IOT e IPsec) y los alias están en "
   "`perimetro-pfsense/README.md`; estas son las que protegen la red interna:")
 table(["Interfaz", "#", "Acción", "Origen → Destino", "Puerto", "Propósito"], [
     ["DMZ", "2", "Block + log", "DMZ net → INTERNA net", "any", "Servidor expuesto comprometido no llega a la red interna"],
@@ -483,19 +499,45 @@ table(["Interfaz", "#", "Acción", "Origen → Destino", "Puerto", "Propósito"]
     ["WAN", "—", "Block implícito", "any → any", "any", "Solo 443 (NAT a SRV-WEB), IKE 500/4500 y ESP están abiertos"],
 ], widths=[1.8, 0.8, 2.2, 4.2, 1.6, 6.0], size=8.5)
 caption("Tabla", "Reglas que bloquean el tráfico no autorizado hacia la VLAN de red interna.")
-placeholder("pfSense: Firewall > Rules > IOT y DMZ con las reglas de bloqueo hacia INTERNA.")
-placeholder("pfSense: Status > System Logs > Firewall mostrando un intento IOT → INTERNA bloqueado.")
 
-H("4.2 Filtrado de contenido: dominios de phishing", 2)
-P("Con **pfBlockerNG-devel** en modo DNSBL (Unbound python mode) se creó el grupo `Phishing` con los feeds "
-  "OpenPhish, URLhaus y Phishing Army, más una lista propia (`phishing-dominios.txt`). Cuando un equipo "
-  "pregunta por un dominio listado, el resolver de pfSense responde con la IP virtual de DNSBL (10.10.10.1) "
-  "en lugar de la real. Para que no se pueda esquivar, la regla INTERNA-4 bloquea DNS (53) y DNS sobre TLS "
-  "(853) hacia cualquier servidor que no sea pfSense. Validación: `nslookup login-banco-seguro-mx.com` → "
-  "10.10.10.1; un dominio legítimo resuelve normal; `nslookup … 8.8.8.8` → *timeout*.")
-placeholder("pfBlockerNG: DNSBL Groups > Phishing y Reports > Alerts > DNSBL con el dominio bloqueado y el nslookup de la PC interna.")
+H("4.2 Implementación en un firewall equivalente y validación", 2)
+P("`lab-perimetro/levantar.sh` crea cuatro redes aisladas (sin salida real a Internet) y conecta el firewall a "
+  "las cuatro, con la IP .1 de cada zona, igual que las interfaces em1.10/.20/.30 de pfSense:")
+table(["Zona", "Red", "Equipos (contenedores)"], [
+    ["WAN («Internet»)", "198.51.100.0/24", "Firewall .2 · sitio externo .80 · DNS público .53 · atacante .66"],
+    ["DMZ", "172.16.10.0/24", "Firewall .1 · SRV-WEB .10 (80/443) · BROKER-IOT .20 (8883)"],
+    ["INTERNA", "172.16.20.0/24", "Firewall .1 · SRV-ARCHIVOS .10 (445) · PC-ADMIN .50 · PC-01 .21"],
+    ["IOT", "172.16.30.0/24", "Firewall .1 · CAM-01 .21 (443)"],
+], widths=[3.2, 3.4, 10.0], size=8.5)
+caption("Tabla", "Topología del laboratorio perimetral (mismo direccionamiento que el diseño).")
+table(["En pfSense", "En el laboratorio", "Cómo se comprueba"], [
+    ["Firewall > Rules (pf) por interfaz", "Cadenas `input`/`forward` de nftables con `iifname` por zona y la misma numeración (INTERNA-1 … IOT-4)", "`validar.sh`: 17 pruebas de conexión"],
+    ["Firewall > NAT > Port Forward / Outbound", "`dnat` 443 → SRV-WEB y `masquerade` hacia la WAN", "Atacante llega solo al 443 publicado"],
+    ["Columna *States* / System Logs > Firewall", "Contador de paquetes en cada regla", "Contadores tras las pruebas"],
+    ["DNS Resolver + pfBlockerNG DNSBL", "dnsmasq: cada dominio de la lista responde la VIP 10.10.10.1", "6 consultas DNS"],
+    ["Snort con *Block Offenders* (tabla `snort2c`)", "Snort 2.9 en la interfaz WAN + set `bloqueados` de nftables", "`ataque-snort.sh` con nmap"],
+], widths=[4.6, 6.8, 5.2], size=8.5)
+caption("Tabla", "Correspondencia entre pfSense y el firewall del laboratorio.")
+fw_tpl = read("lab-perimetro/fw/reglas.nft.tpl")
+fw_fwd = fw_tpl[fw_tpl.index("  chain forward"):fw_tpl.index("  # ---------------- NAT")].rstrip()
+code(fw_fwd, size=7)
+caption("Figura", "Cadena `forward` del firewall (lab-perimetro/fw/reglas.nft.tpl): las reglas de pfSense traducidas a nftables.")
+val = read("docs/evidencias/perimetro-validacion.txt")
+code(val[:val.index("=== 2.")].rstrip() + "\n\n" + val[val.index("=== 3."):val.index("=== 4.")].rstrip(), size=7)
+caption("Figura", "Validación real de la segmentación: 17 de 17 pruebas con el resultado esperado y el contador de cada regla "
+        "(equivale a los registros del firewall de pfSense). IoT y DMZ no alcanzan la red interna; solo PC-ADMIN administra.")
 
-H("4.3 Snort: regla personalizada para escaneos de puertos", 2)
+H("4.3 Filtrado de contenido: dominios de phishing", 2)
+P("En pfSense se usa **pfBlockerNG-devel** en modo DNSBL con el grupo `Phishing` (feeds OpenPhish, URLhaus y "
+  "Phishing Army, más la lista propia `phishing-dominios.txt`). Cuando un equipo pregunta por un dominio listado, "
+  "el resolver responde con la IP virtual de DNSBL (10.10.10.1) en lugar de la real. En el laboratorio el resolver "
+  "del firewall (dnsmasq) hace lo mismo con la misma lista, y la regla INTERNA-4 bloquea DNS (53) y DNS sobre TLS "
+  "(853) hacia cualquier otro servidor para que el filtro no se pueda esquivar:")
+code(val[val.index("=== 2."):val.index("Resultado:")].rstrip() + "\n\n" + val[val.index("=== 4."):].rstrip(), size=7)
+caption("Figura", "Dominios de phishing (y sus subdominios) resueltos a la VIP de bloqueo desde INTERNA e IoT; dominios "
+        "legítimos resueltos normal; consulta a un DNS externo bloqueada; registro de cada bloqueo con la IP del cliente.")
+
+H("4.4 Snort: regla personalizada para escaneos de puertos", 2)
 P("Se usó Snort 2.9.20, la misma rama que instala el paquete Snort de pfSense, para que las reglas se puedan "
   "pegar sin cambios en *custom.rules*. Las siete reglas (`lab-snort/rules/act4-portscan.rules`) cubren las "
   "técnicas de nmap; todas usan `threshold: type both` para generar **una** alerta por origen al superar el "
@@ -514,17 +556,21 @@ caption("Tabla", "Qué detecta cada regla.")
 P("Complementa al preprocesador **sfPortscan** (sensibilidad media), que detecta barridos por estadística "
   "aunque el atacante vaya lento.")
 
-H("4.4 Simulación del ataque con nmap y respuesta IDS/IPS", 2)
-P("`lab-snort/simular-ataque.sh` coloca el sensor en el *namespace* de red del servidor DVWA (como una "
-  "interfaz de pfSense frente a la DMZ) y lanza nmap desde contenedores atacantes en la red del laboratorio. "
-  "`ips-responder.sh` emula la opción **Block Offenders** de pfSense: al ver una alerta `ACT4 SCAN` inserta un "
-  "DROP para la IP de origen. El experimento tiene tres fases: detección, bloqueo del mismo atacante y "
-  "detección de técnicas sigilosas desde IP nuevas.")
+H("4.5 Simulación del ataque con nmap y respuesta IDS/IPS", 2)
+P("**Prueba 1 — Snort en la WAN del firewall (como en pfSense).** `lab-perimetro/ataque-snort.sh` pone Snort en la "
+  "interfaz WAN del firewall. Al detectar un escaneo, agrega la IP de origen al set `bloqueados` de nftables, que "
+  "cumple la misma función que la tabla `snort2c` de pfSense con *Block Offenders* (expira en 1 h, como el "
+  "*Remove Blocked Hosts Interval*). Se comprueba antes, durante y después del ataque:")
+code(read("docs/evidencias/perimetro-snort.txt"), size=7)
+caption("Figura", "El atacante entra al sitio publicado; al escanear es detectado (SID 1000001 y sfPortscan) y bloqueado en "
+        "el mismo segundo; después ya no obtiene respuesta, mientras otros clientes de Internet y la red interna siguen sin afectación.")
+P("**Prueba 2 — Sensor frente al servidor DMZ, técnicas sigilosas.** `lab-snort/simular-ataque.sh` coloca el sensor "
+  "en la interfaz del servidor DVWA (que no filtra puertos, así que nmap recibe RST y se activan más reglas) y "
+  "lanza -sS, -sN, -sF, -sX y scripts NSE, cada técnica desde una IP nueva:")
 SNORT_EV = EV / "snort-nmap.txt"
 if SNORT_EV.exists():
-    code(SNORT_EV.read_text(), size=7, max_lines=95)
-    caption("Figura", "Salida real de la simulación: alertas, bloqueo del atacante y alertas de -sN/-sF/-sX/NSE.")
-placeholder("pfSense: Services > Snort > Alerts y Blocked con la IP del atacante tras `nmap -sS` contra la WAN.")
+    code(SNORT_EV.read_text(), size=6.5, max_lines=95)
+    caption("Figura", "Seis reglas activadas (SYN, RST, NULL, FIN, XMAS y NSE), cada origen bloqueado y un cliente legítimo sin afectación.")
 
 # =================================================================== 5. RIESGOS
 H("5. Evaluación integral de riesgos")

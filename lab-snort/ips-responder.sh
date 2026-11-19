@@ -12,8 +12,13 @@ tail -n0 -F "$LOG" | while read -r line; do
   # La regla 1000002 ve la respuesta del servidor (RST): el atacante es el destino
   [[ "$src" == "${PROTEGIDO:-}" ]] && src=$dst
   [[ -z "$src" || " $WHITELIST " == *" $src "* ]] && continue
-  if ! iptables -C INPUT -s "$src" -j DROP 2>/dev/null; then
+  if [[ "${MODO:-iptables}" == nft ]]; then
+    # Firewall perimetral: agrega la IP al set "bloqueados" (= tabla snort2c de pfSense)
+    nft get element inet act4 bloqueados "{ $src }" >/dev/null 2>&1 && continue
+    nft add element inet act4 bloqueados "{ $src }"
+  else
+    iptables -C INPUT -s "$src" -j DROP 2>/dev/null && continue
     iptables -I INPUT -s "$src" -j DROP
-    echo "$(date -Is) BLOQUEADO $src  <- $line" | tee -a /var/log/snort/bloqueos.log
   fi
+  echo "$(date -Is) BLOQUEADO $src  <- $line" | tee -a /var/log/snort/bloqueos.log
 done

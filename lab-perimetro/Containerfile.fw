@@ -1,0 +1,4 @@
+# Firewall perimetral del laboratorio: hace el papel de pfSense (nftables = pf, dnsmasq = DNS Resolver + DNSBL)
+FROM docker.io/library/ubuntu:24.04
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      nftables dnsmasq iproute2 python3 procps && rm -rf /var/lib/apt/lists/*

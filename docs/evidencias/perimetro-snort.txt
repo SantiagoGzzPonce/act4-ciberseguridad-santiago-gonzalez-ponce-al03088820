@@ -1,0 +1,34 @@
+### Snort escuchando en la WAN del firewall (eth0, 198.51.100.2) en modo IPS (Block Offenders)
+
+### ANTES: el atacante (198.51.100.66) visita el sitio publicado
+curl http://198.51.100.2:443/ -> HTTP 200
+
+### ATAQUE: nmap -sS -T4 -p 1-1000 contra la WAN
+Skipping host 198.51.100.2 due to host timeout
+Nmap done: 1 IP address (1 host up) scanned in 40.16 seconds
+
+--- Services > Snort > Alerts (alert.fast, primeras 3)
+11/19-03:40:27.884446  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 198.51.100.66:40821 -> 198.51.100.2:23
+11/19-03:40:32.912139  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 198.51.100.66:40819 -> 198.51.100.2:359
+11/19-03:40:37.918258  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 198.51.100.66:40819 -> 198.51.100.2:683
+... 8 alertas en total: threshold 'both' emite una por ventana de 5 s mientras el atacante sigue enviando SYN que ya se descartan
+
+--- sfPortscan
+198.51.100.66 -> 198.51.100.2 (portscan) TCP Filtered Portscan
+Scanner IP Range: 198.51.100.66:198.51.100.66
+
+--- Services > Snort > Blocked (set nftables 'bloqueados' = tabla snort2c)
+  elements = { 198.51.100.66 expires 59m18s500ms }
+2026-11-19T03:40:28+00:00 BLOQUEADO 198.51.100.66  <- 11/19-03:40:27.884446  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 198.51.100.66:40821 -> 198.51.100.2:23
+
+### DESPUÉS: el mismo atacante intenta de nuevo
+PORT    STATE    SERVICE
+443/tcp filtered https
+curl http://198.51.100.2:443/ -> HTTP 000 (000 = sin respuesta)
+
+### Otros usuarios no se ven afectados
+Cliente de Internet 198.51.100.80 -> sitio publicado: HTTP 200
+PC-01 (INTERNA) -> SRV-WEB: HTTP 200
+
+--- Contador de la regla de bloqueo
+  ip saddr @bloqueados counter packets 209 bytes 9388 drop comment "SNORT bloqueado"

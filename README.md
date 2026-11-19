@@ -9,7 +9,8 @@ contenedores Podman (rootless) o en las VM del laboratorio; nada se publica fuer
 | [`lab-dvwa-zap/`](lab-dvwa-zap) | 1 | DVWA + MariaDB, plan de OWASP ZAP (sesión autenticada), confirmación manual de SQLi, XSS y control de acceso roto. |
 | [`lab-api-segura/`](lab-api-segura) | 2 | API Flask con OAuth 2.0 (client credentials) + JWT RS256, validación de entradas, rate limiting 100/min, versión vulnerable para comparar, 25 pruebas y colección de Postman/Insomnia. |
 | [`red-segura/`](red-segura) | 3 | Diagrama, direccionamiento y configuraciones IOS para Packet Tracer: 3 VLAN (+ gestión), ACL de mínimo privilegio y VPN IPsec. |
-| [`perimetro-pfsense/`](perimetro-pfsense) | 4 | Reglas de pfSense por interfaz, VPN IPsec, filtrado de phishing con pfBlockerNG y configuración de Snort. |
+| [`perimetro-pfsense/`](perimetro-pfsense) | 4 | Diseño para pfSense: reglas por interfaz, VPN IPsec, filtrado de phishing con pfBlockerNG y configuración de Snort. |
+| [`lab-perimetro/`](lab-perimetro) | 4 | Las mismas reglas implementadas y probadas en un firewall nftables con DNSBL y Snort en la WAN (23 pruebas + ataque nmap). |
 | [`lab-snort/`](lab-snort) | 4 | Snort 2.9 con reglas personalizadas de escaneo, respuesta IPS (bloqueo del origen) y simulación con nmap. |
 | [`docs/`](docs) | 5 | Reporte (.docx), matriz de riesgos 5x5, bitácora de IA y evidencias. |
 
@@ -57,7 +58,12 @@ podman build -t act4/snort:2.9 -f Containerfile.snort .
 podman build -t act4/atacante:1.0 -f Containerfile.atacante .
 ./simular-ataque.sh                  # requiere DVWA arriba; IDS + bloqueo IPS
 ```
-En pfSense: [`perimetro-pfsense/README.md`](perimetro-pfsense/README.md).
+Firewall perimetral equivalente a pfSense (reglas, DNSBL y Snort en la WAN):
+
+```bash
+cd lab-perimetro && ./levantar.sh && ./validar.sh && ./ataque-snort.sh
+```
+Para pfSense real: [`perimetro-pfsense/README.md`](perimetro-pfsense/README.md).
 
 ## Seguridad
 

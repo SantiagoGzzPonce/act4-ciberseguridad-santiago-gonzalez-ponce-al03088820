@@ -18,3 +18,4 @@ lab-dvwa-zap/reportes/.zap-plan.yaml
 lab-snort/logs/
 # Packet Tracer / pfSense exportados con credenciales
 config-*.xml
+lab-perimetro/logs/

@@ -1,0 +1,58 @@
+table inet act4 {
+	set bloqueados {
+		type ipv4_addr
+		timeout 1h
+		comment "Snort Block Offenders (snort2c)"
+		elements = { 198.51.100.66 expires 59m4s358ms }
+	}
+
+	set rfc1918 {
+		type ipv4_addr
+		flags interval
+		elements = { 10.0.0.0/8, 172.16.0.0/12,
+			     192.168.0.0/16 }
+	}
+
+	chain input {
+		type filter hook input priority filter; policy drop;
+		ip saddr @bloqueados counter packets 3270 bytes 143880 drop comment "SNORT bloqueado"
+		ct state established,related accept
+		ct state invalid drop
+		iif "lo" accept
+		iifname "eth2" ip saddr 172.16.20.50 tcp dport { 22, 443 } counter packets 1 bytes 60 accept comment "INTERNA-1 PC_ADMIN -> WebGUI/SSH"
+		iifname "eth2" tcp dport { 22, 443 } counter packets 2 bytes 120 drop comment "INTERNA-2 nadie mas administra el firewall"
+		iifname { "eth1", "eth2", "eth3" } udp dport 53 counter packets 5 bytes 462 accept comment "INTERNA-3 / IOT-1 / DMZ-1 DNS Resolver"
+		iifname "eth3" udp dport 67 counter packets 0 bytes 0 accept comment "IOT-1 DHCP"
+		counter packets 718 bytes 31624 drop comment "Deny implicito (input)"
+	}
+
+	chain forward {
+		type filter hook forward priority filter; policy drop;
+		ip saddr @bloqueados counter packets 209 bytes 9388 drop comment "SNORT bloqueado"
+		ct state established,related accept
+		ct state invalid drop
+		iifname "eth0" ct status dnat ip daddr 172.16.10.10 tcp dport 443 counter packets 11 bytes 596 accept comment "WAN-1 NAT HTTPS -> SRV_WEB"
+		iifname "eth2" meta l4proto { tcp, udp } th dport { 53, 853 } counter packets 1 bytes 94 drop comment "INTERNA-4 bloquea DNS/DoT externo"
+		iifname "eth2" ip daddr 172.16.10.10 tcp dport 443 counter packets 4 bytes 240 accept comment "INTERNA-5 web publicado en DMZ"
+		iifname "eth2" ip saddr 172.16.20.50 ip daddr { 172.16.10.0/24, 172.16.30.0/24 } tcp dport { 22, 443 } counter packets 1 bytes 60 accept comment "INTERNA-6 administracion"
+		iifname "eth2" ip daddr @rfc1918 counter packets 2 bytes 120 drop comment "INTERNA-7 resto de redes privadas"
+		iifname "eth2" oifname "eth0" tcp dport { 80, 443 } counter packets 1 bytes 60 accept comment "INTERNA-8 navegacion"
+		iifname "eth1" ip daddr 172.16.20.0/24 counter packets 2 bytes 120 drop comment "DMZ-2 DMZ no llega a INTERNA"
+		iifname "eth1" ip daddr 172.16.30.0/24 counter packets 2 bytes 120 drop comment "DMZ-3 sin movimiento lateral a IoT"
+		iifname "eth1" oifname "eth0" tcp dport { 80, 443 } counter packets 1 bytes 60 accept comment "DMZ-4 actualizaciones"
+		iifname "eth3" ip daddr 172.16.10.20 tcp dport 8883 counter packets 1 bytes 60 accept comment "IOT-2 MQTT/TLS al broker"
+		iifname "eth3" ip daddr 172.16.20.0/24 counter packets 4 bytes 240 drop comment "IOT-3 IoT no llega a INTERNA"
+		iifname "eth3" counter packets 2 bytes 120 drop comment "IOT-4 sin Internet directo"
+		counter packets 4 bytes 240 drop comment "Deny implicito (forward)"
+	}
+
+	chain prerouting {
+		type nat hook prerouting priority dstnat; policy accept;
+		iifname "eth0" tcp dport 443 counter packets 220 bytes 9984 dnat ip to 172.16.10.10 comment "Port forward 443 -> SRV_WEB"
+	}
+
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+		oifname "eth0" counter packets 3 bytes 200 masquerade comment "Outbound NAT"
+	}
+}

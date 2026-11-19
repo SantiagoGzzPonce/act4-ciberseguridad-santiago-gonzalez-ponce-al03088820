@@ -157,3 +157,7 @@ obtuvo el laboratorio reproducible en contenedores
 
 *Diagnostics > Backup & Restore > Download configuration as XML* y guarda `config-act4.xml`
 fuera del repositorio (contiene hashes de contraseñas y la PSK/certificados de la VPN).
+
+## Implementación probada
+
+Estas reglas están implementadas y validadas con tráfico real en [`../lab-perimetro`](../lab-perimetro).
