@@ -288,7 +288,7 @@ caption("Tabla", "Alertas de riesgo alto y medio de OWASP ZAP sobre DVWA (nivel 
 P("**Lo que ZAP no detectó.** El control de acceso roto de `/authbypass/` no aparece en ninguna alerta: un escáner "
   "no sabe qué usuario *debería* poder ver qué dato, porque la autorización depende de reglas del negocio. Por eso "
   "la tercera vulnerabilidad se encontró a mano, comparando las respuestas de un usuario normal y de un administrador.")
-placeholder("Pantalla de ZAP (o el reporte zap-dvwa.html abierto en el navegador) mostrando el árbol de alertas.")
+figure(EV / "zap-reporte.png", "Reporte HTML de OWASP ZAP 2.17.0 sobre DVWA: 9 alertas altas, 12 medias, 10 bajas y 7 informativas.", width=16)
 
 H("1.2 Confirmación manual de tres vulnerabilidades OWASP Top 10", 2)
 P("Un hallazgo de escáner no es una vulnerabilidad hasta que se explota. `confirmar-vulnerabilidades.sh` "
