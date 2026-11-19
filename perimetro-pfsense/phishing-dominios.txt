@@ -1,0 +1,9 @@
+# Lista local de dominios de phishing (DNSBL personalizada de pfBlockerNG).
+# Dominios de ejemplo para la prueba del laboratorio, mas los que reporten los feeds.
+# Formato: un dominio por linea. pfBlockerNG bloquea tambien los subdominios.
+login-banco-seguro-mx.com
+verificacion-cuenta-paypal.net
+microsoft365-soporte-login.com
+actualiza-tu-sat.info
+netfliix-pagos.com
+phishing-prueba.act4.test

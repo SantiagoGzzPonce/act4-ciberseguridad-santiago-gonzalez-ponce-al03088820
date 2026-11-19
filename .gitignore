@@ -1,0 +1,20 @@
+# Secretos y llaves (nunca a Git)
+.env
+*.env
+!.env.example
+keys/
+*.pem
+*.key
+# Dependencias y datos locales
+.deps/
+venv/
+__pycache__/
+*.pyc
+*.db
+# Sesion de DVWA
+lab-dvwa-zap/.cookie
+lab-dvwa-zap/reportes/.zap-plan.yaml
+# Logs crudos de Snort (las evidencias van en docs/evidencias)
+lab-snort/logs/
+# Packet Tracer / pfSense exportados con credenciales
+config-*.xml

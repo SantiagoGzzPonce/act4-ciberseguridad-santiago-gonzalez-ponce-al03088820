@@ -1,0 +1,63 @@
+Found Java version 17.0.21
+Available memory: 31964 MB
+Using JVM args: -Xmx7991m
+275 [main] INFO  org.parosproxy.paros.Constant - Copying default configuration to /home/zap/.ZAP/config.xml
+340 [main] INFO  org.parosproxy.paros.Constant - Creating directory /home/zap/.ZAP/session
+341 [main] INFO  org.parosproxy.paros.Constant - Creating directory /home/zap/.ZAP/dirbuster
+341 [main] INFO  org.parosproxy.paros.Constant - Creating directory /home/zap/.ZAP/fuzzers
+341 [main] INFO  org.parosproxy.paros.Constant - Creating directory /home/zap/.ZAP/plugin
+Nov 19, 2026 3:06:45 AM java.util.prefs.FileSystemPreferences$1 run
+INFO: Created user preferences directory.
+Job replacer set description = cookie de sesion DVWA
+Job replacer set matchType = req_header
+Job replacer set matchString = Cookie
+Job replacer set replacementString = PHPSESSID=716356f909c3c76331712ef28775bb44; security=low
+Job spider set context = dvwa
+Job spider set url = http://dvwa/vulnerabilities/sqli/
+Job spider set maxDuration = 2
+Job requestor set url = http://dvwa/vulnerabilities/sqli/?id=1&Submit=Submit
+Job requestor set url = http://dvwa/vulnerabilities/xss_r/?name=prueba
+Job requestor set url = http://dvwa/vulnerabilities/authbypass/get_user_data.php
+Job requestor set url = http://dvwa/vulnerabilities/exec/
+Job requestor set url = http://dvwa/vulnerabilities/fi/?page=include.php
+Job passiveScan-wait set maxDuration = 2
+Job activeScan set context = dvwa
+Job activeScan set maxScanDurationInMins = 12
+Job activeScan set threadPerHost = 4
+Job report set template = traditional-html
+Job report set reportDir = /zap/wrk/reportes
+Job report set reportFile = zap-dvwa.html
+Job report set reportTitle = OWASP ZAP - DVWA (Act4)
+Job report set template = traditional-json
+Job report set reportDir = /zap/wrk/reportes
+Job report set reportFile = zap-dvwa.json
+Job report set template = traditional-md
+Job report set reportDir = /zap/wrk/reportes
+Job report set reportFile = zap-dvwa.md
+Job replacer started
+Job replacer finished, time taken: 00:00:00
+Job spider started
+Job spider requesting URL http://dvwa/
+Job spider found 265 URLs
+Job spider finished, time taken: 00:00:01
+Job requestor started
+Job requestor requesting URL http://dvwa/vulnerabilities/sqli/?id=1&Submit=Submit
+Job requestor requesting URL http://dvwa/vulnerabilities/xss_r/?name=prueba
+Job requestor requesting URL http://dvwa/vulnerabilities/authbypass/get_user_data.php
+Job requestor requesting URL http://dvwa/vulnerabilities/exec/
+Job requestor requesting URL http://dvwa/vulnerabilities/fi/?page=include.php
+Job requestor finished, time taken: 00:00:00
+Job passiveScan-wait started
+Job passiveScan-wait finished, time taken: 00:00:01
+Job activeScan started
+Job activeScan finished, time taken: 00:09:20
+Job report started
+Job report generated report /zap/wrk/reportes/zap-dvwa.html
+Job report finished, time taken: 00:00:00
+Job report started
+Job report generated report /zap/wrk/reportes/zap-dvwa.json
+Job report finished, time taken: 00:00:00
+Job report started
+Job report generated report /zap/wrk/reportes/zap-dvwa.md
+Job report finished, time taken: 00:00:00
+Automation plan succeeded!

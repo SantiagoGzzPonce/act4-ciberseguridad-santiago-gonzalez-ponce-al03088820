@@ -1,0 +1,22 @@
+# DVWA (aplicacion deliberadamente vulnerable) + MariaDB. Solo en 127.0.0.1.
+name: act4-dvwa
+services:
+  db:
+    image: docker.io/library/mariadb:11.4
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwa-root-lab
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    networks: [lab]
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    depends_on: [db]
+    environment:
+      DB_SERVER: db
+      DEFAULT_SECURITY_LEVEL: low
+    ports: ["127.0.0.1:4280:80"]     # nunca expuesto a la red
+    networks: [lab]
+networks:
+  lab:
+    name: act4-lab

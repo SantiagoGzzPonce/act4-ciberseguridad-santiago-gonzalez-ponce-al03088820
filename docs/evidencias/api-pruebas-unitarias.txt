@@ -1,0 +1,30 @@
+test_01_token_rs256_con_claims (test_api.TestOAuthJWT.test_01_token_rs256_con_claims) ... ok
+test_02_secreto_incorrecto_401 (test_api.TestOAuthJWT.test_02_secreto_incorrecto_401) ... ok
+test_03_grant_no_soportado (test_api.TestOAuthJWT.test_03_grant_no_soportado) ... ok
+test_04_scope_no_permitido (test_api.TestOAuthJWT.test_04_scope_no_permitido) ... ok
+test_05_sin_token_401 (test_api.TestOAuthJWT.test_05_sin_token_401) ... ok
+test_06_token_valido_200 (test_api.TestOAuthJWT.test_06_token_valido_200) ... ok
+test_07_alg_none_rechazado (test_api.TestOAuthJWT.test_07_alg_none_rechazado) ... ok
+test_08_confusion_hs256_con_llave_publica (test_api.TestOAuthJWT.test_08_confusion_hs256_con_llave_publica) ... ok
+test_09_firma_alterada (test_api.TestOAuthJWT.test_09_firma_alterada) ... ok
+test_10_token_expirado (test_api.TestOAuthJWT.test_10_token_expirado) ... ok
+test_11_audiencia_incorrecta (test_api.TestOAuthJWT.test_11_audiencia_incorrecta) ... ok
+test_12_scope_insuficiente_403 (test_api.TestOAuthJWT.test_12_scope_insuficiente_403) ... ok
+test_13_jwks_publica (test_api.TestOAuthJWT.test_13_jwks_publica) ... ok
+test_30_limite_100_por_minuto (test_api.TestRateLimit.test_30_limite_100_por_minuto) ... ok
+test_31_limite_por_cliente (test_api.TestRateLimit.test_31_limite_por_cliente) ... ok
+test_32_ventana_se_libera (test_api.TestRateLimit.test_32_ventana_se_libera) ... ok
+test_33_sub_falsificado_no_evade_limite (test_api.TestRateLimit.test_33_sub_falsificado_no_evade_limite) ... ok
+test_20_sqli_en_query_string_400 (test_api.TestValidacion.test_20_sqli_en_query_string_400) ... ok
+test_21_sqli_en_ruta_400 (test_api.TestValidacion.test_21_sqli_en_ruta_400) ... ok
+test_22_post_valido_201 (test_api.TestValidacion.test_22_post_valido_201) ... ok
+test_23_post_invalido_400 (test_api.TestValidacion.test_23_post_invalido_400) ... ok
+test_24_payload_grande_413 (test_api.TestValidacion.test_24_payload_grande_413) ... ok
+test_40_sqli_union_extrae_usuarios (test_api.TestVersionVulnerable.test_40_sqli_union_extrae_usuarios) ... ok
+test_41_alg_none_escala_a_admin (test_api.TestVersionVulnerable.test_41_alg_none_escala_a_admin) ... ok
+test_42_secreto_debil_permite_falsificar (test_api.TestVersionVulnerable.test_42_secreto_debil_permite_falsificar) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 1.928s
+
+OK

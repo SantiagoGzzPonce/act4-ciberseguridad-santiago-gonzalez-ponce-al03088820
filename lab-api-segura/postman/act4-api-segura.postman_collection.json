@@ -1,0 +1,403 @@
+{
+  "info": {
+    "name": "Act4 - API segura (JWT + OAuth 2.0 + rate limit)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Importar en Postman o Insomnia. Definir client_secret con el valor de CLIENT_LECTURA_SECRET del .env (no se guarda en la coleccion)."
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      {
+        "key": "grant_type",
+        "value": "client_credentials"
+      },
+      {
+        "key": "accessTokenUrl",
+        "value": "{{base_url}}/oauth/token"
+      },
+      {
+        "key": "clientId",
+        "value": "{{client_id}}"
+      },
+      {
+        "key": "clientSecret",
+        "value": "{{client_secret}}"
+      },
+      {
+        "key": "scope",
+        "value": "productos:read"
+      },
+      {
+        "key": "client_authentication",
+        "value": "header"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5002"
+    },
+    {
+      "key": "client_id",
+      "value": "app-lectura"
+    },
+    {
+      "key": "client_secret",
+      "value": ""
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Obtener token (OAuth 2.0 client_credentials)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 y token RS256\", () => {",
+              "  pm.response.to.have.status(200);",
+              "  const t = pm.response.json().access_token;",
+              "  pm.collectionVariables.set(\"access_token\", t);",
+              "  pm.expect(JSON.parse(atob(t.split(\".\")[0])).alg).to.eql(\"RS256\");",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "{{client_id}}"
+            },
+            {
+              "key": "password",
+              "value": "{{client_secret}}"
+            }
+          ]
+        },
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials"
+            },
+            {
+              "key": "scope",
+              "value": "productos:read"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/oauth/token",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "oauth",
+            "token"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Listar productos con JWT",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"2. Listar productos con JWT\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Sin token -> 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"3. Sin token -> 401\", () => pm.response.to.have.status(401));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "noauth"
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4a. SQLi OR 1=1 -> 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"4a. SQLi OR 1=1 -> 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos?categoria=redes' OR '1'='1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ],
+          "query": [
+            {
+              "key": "categoria",
+              "value": "redes' OR '1'='1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4b. SQLi UNION -> 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"4b. SQLi UNION -> 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos?categoria=x' UNION SELECT id,email,password_hash,1,1 FROM usuarios--",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ],
+          "query": [
+            {
+              "key": "categoria",
+              "value": "x' UNION SELECT id,email,password_hash,1,1 FROM usuarios--"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4c. SQLi en la ruta -> 400",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"4c. SQLi en la ruta -> 400\", () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos/1 OR 1=1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos",
+            "1 OR 1=1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. POST sin scope productos:write -> 403",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"5. POST sin scope productos:write -> 403\", () => pm.response.to.have.status(403));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/productos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nombre\": \"Camara PTZ\", \"categoria\": \"iot\", \"precio\": 1500, \"stock\": 3}"
+        }
+      }
+    },
+    {
+      "name": "6. Rate limit: correr con Runner x 101 iteraciones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"200 o 429\", () => pm.expect(pm.response.code).to.be.oneOf([200,429]));",
+              "// En el Runner las primeras 100 dan 200 y la 101 da 429",
+              "if (pm.response.code === 429) { pm.test(\"Retry-After presente\", () => pm.response.to.have.header(\"Retry-After\")); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/productos/1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos",
+            "1"
+          ]
+        }
+      }
+    }
+  ]
+}

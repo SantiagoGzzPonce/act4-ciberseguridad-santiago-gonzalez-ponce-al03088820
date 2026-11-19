@@ -1,0 +1,71 @@
+### Sensor Snort en la interfaz de act4-dvwa-dvwa-1 (10.89.0.3)
+### Atacante: act4-atacante (10.89.0.25)
+
+### FASE 1 - IDS: reconocimiento del atacante (antes del bloqueo)
+--- nmap -sS -T4 -p 1-1000 (SYN scan)
+Not shown: 999 closed tcp ports (reset)
+PORT   STATE SERVICE
+80/tcp open  http
+Nmap done: 1 IP address (1 host up) scanned in 0.09 seconds
+
+--- alert.fast
+11/19-03:19:56.274875  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.25:56956 -> 10.89.0.3:111
+11/19-03:19:56.274889  [**] [1:1000002:1] ACT4 SCAN puertos cerrados - RST masivos al mismo origen [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.3:724 -> 10.89.0.25:56956
+
+--- bloqueos aplicados por el responder IPS
+2026-11-19T03:19:56+00:00 BLOQUEADO 10.89.0.25  <- 11/19-03:19:56.274875  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.25:56956 -> 10.89.0.3:111
+
+--- reglas iptables en el servidor
+-P INPUT ACCEPT
+-A INPUT -s 10.89.0.25/32 -j DROP
+
+### FASE 2 - IPS: el mismo atacante (10.89.0.25) intenta de nuevo
+PORT    STATE    SERVICE
+22/tcp  filtered ssh
+80/tcp  filtered http
+443/tcp filtered https
+Nmap done: 1 IP address (1 host up) scanned in 1.28 seconds
+curl http://10.89.0.3/ -> HTTP 000 (000 = sin respuesta)
+
+### FASE 3 - Otras tecnicas desde atacantes nuevos (IP distinta en cada contenedor)
+--- alert.fast (completo)
+11/19-03:19:56.274875  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.25:56956 -> 10.89.0.3:111
+11/19-03:19:56.274889  [**] [1:1000002:1] ACT4 SCAN puertos cerrados - RST masivos al mismo origen [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.3:724 -> 10.89.0.25:56956
+11/19-03:20:07.185444  [**] [1:1000003:1] ACT4 SCAN NULL - nmap -sN [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.26:37436 -> 10.89.0.3:53
+11/19-03:20:07.187717  [**] [1:1000002:1] ACT4 SCAN puertos cerrados - RST masivos al mismo origen [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.3:155 -> 10.89.0.26:37436
+11/19-03:20:08.693691  [**] [1:1000004:1] ACT4 SCAN FIN - nmap -sF [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.27:52571 -> 10.89.0.3:80
+11/19-03:20:08.695950  [**] [1:1000002:1] ACT4 SCAN puertos cerrados - RST masivos al mismo origen [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.3:16 -> 10.89.0.27:52571
+11/19-03:20:10.191694  [**] [1:1000005:1] ACT4 SCAN XMAS - nmap -sX [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.28:41787 -> 10.89.0.3:25
+11/19-03:20:10.193952  [**] [1:1000002:1] ACT4 SCAN puertos cerrados - RST masivos al mismo origen [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.3:66 -> 10.89.0.28:41787
+11/19-03:20:11.691155  [**] [1:1000006:1] ACT4 SCAN Nmap Scripting Engine (User-Agent) [**] [Classification: Web Application Attack] [Priority: 1] {TCP} 10.89.0.29:43284 -> 10.89.0.3:80
+11/19-03:20:11.692623  [**] [1:1000006:1] ACT4 SCAN Nmap Scripting Engine (User-Agent) [**] [Classification: Web Application Attack] [Priority: 1] {TCP} 10.89.0.29:43292 -> 10.89.0.3:80
+
+--- resumen por regla
+      1 1000001
+      4 1000002
+      1 1000003
+      1 1000004
+      1 1000005
+      2 1000006
+
+--- sfPortscan (portscan.log, primeras lineas)
+Time: 11/19-03:19:56.274820 
+event_ref: 0
+10.89.0.25 -> 10.89.0.3 (portscan) TCP Portscan
+Priority Count: 13
+Connection Count: 15
+IP Count: 1
+Scanner IP Range: 10.89.0.25:10.89.0.25
+Port/Proto Count: 15
+Port/Proto Range: 21:995
+
+
+--- bloqueos.log
+2026-11-19T03:19:56+00:00 BLOQUEADO 10.89.0.25  <- 11/19-03:19:56.274875  [**] [1:1000001:2] ACT4 SCAN SYN - posible nmap -sS [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.25:56956 -> 10.89.0.3:111
+2026-11-19T03:20:07+00:00 BLOQUEADO 10.89.0.26  <- 11/19-03:20:07.185444  [**] [1:1000003:1] ACT4 SCAN NULL - nmap -sN [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.26:37436 -> 10.89.0.3:53
+2026-11-19T03:20:08+00:00 BLOQUEADO 10.89.0.27  <- 11/19-03:20:08.693691  [**] [1:1000004:1] ACT4 SCAN FIN - nmap -sF [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.27:52571 -> 10.89.0.3:80
+2026-11-19T03:20:10+00:00 BLOQUEADO 10.89.0.28  <- 11/19-03:20:10.191694  [**] [1:1000005:1] ACT4 SCAN XMAS - nmap -sX [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 10.89.0.28:41787 -> 10.89.0.3:25
+2026-11-19T03:20:11+00:00 BLOQUEADO 10.89.0.29  <- 11/19-03:20:11.691155  [**] [1:1000006:1] ACT4 SCAN Nmap Scripting Engine (User-Agent) [**] [Classification: Web Application Attack] [Priority: 1] {TCP} 10.89.0.29:43284 -> 10.89.0.3:80
+
+--- Control: un cliente legitimo nuevo (sin escanear) sigue entrando
+curl http://10.89.0.3/login.php -> HTTP 200

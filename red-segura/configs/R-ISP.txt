@@ -1,0 +1,13 @@
+! R-ISP (Cisco 2911) - simula Internet: conecta R-EDGE y al usuario remoto
+hostname R-ISP
+interface GigabitEthernet0/0
+ description hacia R-EDGE
+ ip address 200.10.10.1 255.255.255.252
+ no shutdown
+interface GigabitEthernet0/1
+ description Internet / casa del usuario remoto
+ ip address 198.51.100.1 255.255.255.0
+ no shutdown
+! Sin rutas hacia 172.16.0.0/16: las redes privadas no son alcanzables desde Internet
+end
+write memory

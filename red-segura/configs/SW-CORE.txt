@@ -1,0 +1,100 @@
+! =====================================================================
+! SW-CORE (Cisco 2960-24TT) - VLAN, troncal y endurecimiento de capa 2
+! =====================================================================
+hostname SW-CORE
+no ip domain-lookup
+ip domain-name act4.local
+service password-encryption
+enable secret Act4-Enable-2026
+username admin privilege 15 secret Act4-Admin-2026
+!
+vlan 10
+ name DMZ
+vlan 20
+ name INTERNA
+vlan 30
+ name IOT
+vlan 99
+ name GESTION
+vlan 999
+ name NO-USADOS
+!
+! --- Troncal hacia R-EDGE: solo las VLAN necesarias, nativa = 99 (no la 1)
+interface GigabitEthernet0/1
+ description TRONCAL R-EDGE
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,99
+ switchport nonegotiate
+!
+! --- DMZ: servidores con IP fija
+interface range FastEthernet0/1 - 4
+ description DMZ
+ switchport mode access
+ switchport access vlan 10
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! --- INTERNA
+interface range FastEthernet0/5 - 12
+ description INTERNA
+ switchport mode access
+ switchport access vlan 20
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security mac-address sticky
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! --- IoT
+interface range FastEthernet0/13 - 18
+ description IOT
+ switchport mode access
+ switchport access vlan 30
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! --- Puertos sin uso: apagados y en una VLAN aislada
+interface range FastEthernet0/19 - 24, GigabitEthernet0/2
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+!
+! --- Gestion del switch solo por VLAN 99
+interface Vlan1
+ shutdown
+interface Vlan99
+ ip address 172.16.99.2 255.255.255.0
+ no shutdown
+ip default-gateway 172.16.99.1
+!
+! --- DHCP snooping: solo la troncal (donde esta el servidor DHCP) es confiable
+ip dhcp snooping
+ip dhcp snooping vlan 20,30
+interface GigabitEthernet0/1
+ ip dhcp snooping trust
+!
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+access-list 10 permit host 172.16.20.50
+access-list 10 deny any log
+line vty 0 15
+ login local
+ transport input ssh
+ access-class 10 in
+line con 0
+ login local
+end
+write memory
