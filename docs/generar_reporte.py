@@ -204,21 +204,7 @@ def read(path):
 
 NIVEL_FILL = {"Crítico": "F4C7C7", "Alto": "FAD9C9", "Medio": "FDEBC0", "Bajo": "CDEFC8"}
 
-# =================================================================== PORTADA
-for _ in range(5):
-    P()
-P("Actividad 4", size=14, align=WD_ALIGN_PARAGRAPH.CENTER, color="2E74B5")
-t = doc.add_paragraph(style="Title")
-t.alignment = WD_ALIGN_PARAGRAPH.CENTER
-t.add_run("Seguridad en aplicaciones web, API y redes: de la vulnerabilidad al perímetro")
-P("Ciberseguridad", size=13, align=WD_ALIGN_PARAGRAPH.CENTER)
-for _ in range(4):
-    P()
-P("Santiago Gonzalez Ponce", bold=True, size=13, align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
-P("Matrícula: AL03088820", align=WD_ALIGN_PARAGRAPH.CENTER, after=2)
-P(FECHA, align=WD_ALIGN_PARAGRAPH.CENTER, after=14)
-P(f"Repositorio: {REPO}", size=9.5, align=WD_ALIGN_PARAGRAPH.CENTER, color="2E74B5")
-doc.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
+# Sin portada: el alumno agrega la suya.
 
 # =================================================================== INTRODUCCIÓN
 H("Introducción")
@@ -233,8 +219,8 @@ P("Las partes que pueden contenerse se ejecutaron de verdad en contenedores Podm
   "nmap, además de un firewall perimetral con las reglas de pfSense traducidas a nftables. Todos los puertos "
   "se publican solo en `127.0.0.1` o en redes internas sin salida. Las salidas que se citan en este reporte "
   "son las reales y están completas en `docs/evidencias/`. Packet Tracer no corre en contenedor: para la red "
-  "se entregan las configuraciones completas, la guía de armado y las pruebas, y los recuadros amarillos marcan "
-  "dónde va cada captura.")
+  "se entregan el diagrama, las configuraciones completas de cada equipo, la guía de armado y las pruebas.")
+P(f"Repositorio con el código, las configuraciones y las evidencias: {REPO}", size=10, color="2E74B5")
 
 table(["Paso", "Herramienta / entorno", "Resultado principal"], [
     ["1. Vulnerabilidades web", "DVWA (digininja, PHP 8.5) + OWASP ZAP stable (Automation Framework)", "SQLi, XSS reflejado y control de acceso roto confirmados"],
@@ -458,9 +444,6 @@ P("R-EDGE funciona como servidor Easy VPN (IKEv1): fase 1 con AES-256, SHA, llav
   "además con usuario y contraseña (XAUTH), recibe una IP del pool 10.10.50.0/24 y un **split tunnel** que "
   "solo enruta DMZ e INTERNA. Una ACL de salida en la subinterfaz de IoT descarta cualquier tráfico del pool "
   "VPN. En pfSense la misma VPN se define con IKEv2, AES-256-GCM y DH 14+.")
-placeholder("Packet Tracer: topología completa armada (vista lógica).")
-placeholder("PC-REMOTO > Desktop > VPN conectado y `show crypto ipsec sa` en R-EDGE con contadores encaps/decaps.")
-placeholder("Pings bloqueados: CAM-01 → 172.16.20.10 y SRV-WEB → 172.16.20.10, más `show access-lists` con coincidencias en las líneas deny.")
 
 H("3.2 Justificación: principio de mínimo privilegio", 2)
 P("Cada zona agrupa activos con el mismo nivel de confianza y recibe **solo** los flujos que su función "
