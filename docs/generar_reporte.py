@@ -435,8 +435,8 @@ caption("Figura", "Flujo OAuth → JWT RS256 y respuestas 401/403/400/429. Las 6
 P("La colección `postman/act4-api-segura.postman_collection.json` (importable en Postman e Insomnia) usa "
   "autorización OAuth 2.0 a nivel colección, guarda el token en una variable y trae pruebas en cada petición; "
   "la petición 6 se corre en el *Runner* con 101 iteraciones para observar el 429.")
-placeholder("Postman/Insomnia: petición 1 (token) con la respuesta JSON y la pestaña Tests en verde.")
-placeholder("Postman Runner con 101 iteraciones: 100 × 200 y la última 429 con Retry-After.")
+figure(EV / "postman-token.png", "Postman: token OAuth 2.0 (client_credentials) emitido como JWT RS256 con vida de 900 s y scope productos:read; prueba 1/1 en verde.", width=16)
+figure(EV / "postman-ratelimit.png", "Postman Runner con 101 iteraciones: las solicitudes 97 a 100 responden 200 y la 101 recibe 429 con el encabezado Retry-After.", width=12)
 
 # =================================================================== 3. RED
 H("3. Diseño de red segura")
